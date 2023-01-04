@@ -19,3 +19,4 @@ experiments/
 xp/
 dataset/
 *.lock
+!requirements.txt
