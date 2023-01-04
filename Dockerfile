@@ -1,7 +1,7 @@
 # From https://github.com/bengreenier/docker-xvfb/
 FROM ubuntu:20.04
 ARG DEBIAN_FRONTEND=noninteractive
-ENV TZ=Europe/Paris
+ENV TZ=asia/tokyo
 RUN  apt-get update -y \
   && apt-get install --no-install-recommends -y \
   	xvfb \
@@ -32,6 +32,7 @@ RUN  apt-get update -y \
 	libxext-dev \
 	libxt-dev \
 	git \
+	mesa-utils \
   && rm -rf /var/lib/apt/lists/*
 
 # Install coppelia
@@ -50,22 +51,49 @@ ENV LD_LIBRARY_PATH=$COPPELIASIM_ROOT:$LD_LIBRARY_PATH
 ENV QT_QPA_PLATFORM_PLUGIN_PATH=$COPPELIASIM_ROOT
 COPY PyRep /opt/PyRep/
 WORKDIR /opt/PyRep
-RUN python3.9 -m pip install -r requirements.txt && \
-	python3.9 -m pip install -e . 
+RUN python3.9 -m pip install -r requirements.txt && python3.9 -m pip install . 
+
+
+COPY RLBench /opt/RLBench/
+WORKDIR /opt/RLBench
+RUN python3.9 -m pip install -r requirements.txt && python3.9 -m pip install .
+
 
 # And finally install Hiveformer dependencies
 COPY requirements.txt /opt/requirements.txt
 RUN python3.9 -m pip install -r /opt/requirements.txt
 
 # Install Xvfb through external script
-WORKDIR /usr/bin
-COPY xvfb-startup.sh .
-RUN sed -i 's/\r$//' xvfb-startup.sh
-ARG RESOLUTION="224x224x24"
-ENV XVFB_RES="${RESOLUTION}"
-ARG XARGS=""
-ENV XVFB_ARGS="${XARGS}"
-ENTRYPOINT ["/bin/bash", "xvfb-startup.sh"]
+# WORKDIR /usr/bin
+# COPY xvfb-startup.sh .
+# RUN sed -i 's/\r$//' xvfb-startup.sh
+# ARG RESOLUTION="224x224x24"
+# ENV XVFB_RES="${RESOLUTION}"
+# ARG XARGS=""
+# ENV XVFB_ARGS="${XARGS}"
+# ENTRYPOINT ["/bin/bash", "xvfb-startup.sh"]
+
+################# add command by takashiro #################
+WORKDIR /root
+
+# python
+RUN ln -s /usr/bin/python3.9 /usr/bin/python
+
+# zsh
+# RUN apt-get update && apt-get install -y wget git zsh
+# SHELL ["/bin/zsh", "-c"]
+# RUN wget http://github.com/robbyrussell/oh-my-zsh/raw/master/tools/install.sh -O - | zsh
+# RUN touch ~/.zshrc
+# RUN sed -i "s/# zstyle ':omz:update' mode disabled/zstyle ':omz:update' mode disabled/g" ~/.zshrc
+
+# alias
+RUN apt-get update && apt-get install -y xvfb x11vnc icewm
+RUN echo 'alias vnc="export DISPLAY=:0; (Xvfb :0 -screen 0 1400x900x24 &); (x11vnc -display :0 -forever -noxdamage > /dev/null 2>&1 &); icewm-session &"' >> /root/.bashrc
+RUN echo 'alias tb="tensorboard --logdir"' >> /root/.bashrc
+
+WORKDIR /root
+CMD ["bash"]
+###########################################################
 
 # Test if everything is fine
-CMD glxgears
+# CMD glxgears

@@ -26,7 +26,7 @@ class Arguments(tap.Tap):
     batch_size: int = 10
     encoder: TextEncoder = "clip"
     model_max_length: int = 53
-    variations: Tuple[int, ...] = (1,)
+    variations: Tuple[int, ...] = (0, )
     device: str = "cuda"
     annotations: Tuple[Path, ...] = ()
     zero: bool = False

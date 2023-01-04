@@ -1,16 +1,14 @@
-all :
-	container rlbench pyrep
-.PHONY : all
+name = takashiro
 
-help :           ## Show this help.
-	@fgrep -h "##" $(MAKEFILE_LIST) | fgrep -v fgrep | sed -e 's/\\$$//' | sed -e 's/##//'
-
-rlbench : 	## Install RLBench
-	cd RLBench && pip install -r requirements.txt && pip install -e . && cd ..
-
-pyrep : 	## Install PyRep
-	cd PyRep && pip install -r requirements.txt && pip install -e . && cd ..
-
-container:
+build:
 	DOCKER_BUILDKIT=1 docker build -f Dockerfile . -t hiveformer
-	singularity build hiveformer.sif docker-daemon://hiveformer:latest
+	# singularity build hiveformer.sif docker-daemon://hiveformer:latest
+
+run:
+	docker run -d -it --gpus all --rm --name ${name}_hiveformer \
+			-v `pwd`:/root/hiveformer \
+			--shm-size=50gb \
+			hiveformer:latest
+
+exec:
+	docker exec -it $(name)_hiveformer bash

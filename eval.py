@@ -158,12 +158,9 @@ if __name__ == "__main__":
         raise RuntimeError()
     model = load_model(checkpoint, args)
 
-    if args.tasks is None or args.gripper_pose is None or args.taskvar_token is None:
-        raise ValueError()
-
     # load RLBench environment
     env = RLBenchEnv(
-        data_path=args.data_dir,
+        data_path="",
         apply_rgb=True,
         apply_pc=True,
         headless=args.headless,

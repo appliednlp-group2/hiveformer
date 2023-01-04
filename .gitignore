@@ -17,3 +17,5 @@ __pycache__
 *.pkl
 experiments/
 xp/
+dataset/
+*.lock

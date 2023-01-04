@@ -1,6 +1,6 @@
 [submodule "RLBench"]
 	path = RLBench
-	url = https://github.com/guhur/RLBench
+	url = https://github.com/appliednlp-group2/RLBench
 [submodule "PyRep"]
 	path = PyRep
 	url = https://github.com/guhur/PyRep

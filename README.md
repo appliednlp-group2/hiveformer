@@ -13,40 +13,63 @@ This is the PyTorch implementation of the Hiveformer research paper:
 > **CoRL 2022 (oral)**
 
 
+## \[追記\] 0.　使い方
+以下のコマンドでリポジトリをクローン
+
+```bash
+git clone --recursive https://github.com/appliednlp-group2/hiveformer
+
+# or
+git clone https://github.com/appliednlp-group2/hiveformer
+git submodule --init --recursive update
+```
+
+docker環境での実行を想定しています
+
+makeコマンドでdockerfileをbuild&runできます
+
+ちなみに自分はvscodeのremotesshで直接containerの中に入ってます
+```bash
+# dockerfileをbuild
+make build
+
+# containerを実行
+make run name={your name}
+
+# containerに入る
+make exec name={your name}
+```
+
+データ生成，学習，評価はscriptsファイルの中にまとめています
+
+
+```bash
+
+# カレントディレクトリをhiveformerフォルダに
+cd hiveformer
+
+# エキスパートデータを生成
+sh scripts/data_generator.sh
+
+# 学習
+sh scripts/train.sh
+
+# 評価
+sh scripts/eval.sh
+```
 
 ## :hammer_and_wrench: 1. Getting started
 
 Clone the repository along with its submodules:
 
 ```bash
-git clone --recursive https://github.com/guhur/hiveformer
+git clone --recursive https://github.com/appliednlp-group2/hiveformer
 
 # or
-git clone https://github.com/guhur/hiveformer
+git clone https://github.com/appliednlp-group2/hiveformer
 git submodule --init --recursive update
 ```
 
-You need a recent version of Python (higher or equal than 3.9) and install dependencies:
-
-```bash
-poetry install
-
-# this should be run on every shell
-poetry shell
-```
-
-Other dependencies ([RLBench](https://github.com/stepjam/RLBench), [PyRep](https://github.com/stepjam/PyRep)) need to be installed manually. Launch corresponding Makefile rules:
-
-```bash
-make pyrep
-make rlbench
-```
-
-Note that you can also use a Docker or Singularity container:
-
-```bash
-make container
-```
 
 ## :minidisc: 2. Preparing dataset
 
