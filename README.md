@@ -48,6 +48,9 @@ make exec name={your name}
 # カレントディレクトリをhiveformerフォルダに
 cd hiveformer
 
+# vncの設定
+vnc
+
 # エキスパートデータを生成
 sh scripts/data_generator.sh
 
