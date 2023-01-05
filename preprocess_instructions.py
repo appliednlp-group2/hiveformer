@@ -143,6 +143,8 @@ if __name__ == "__main__":
                 for i in range(3):
                     try:
                         instr = task_inst.init_episode(variation)
+                        instr = ["1. Position the arm above the rubbish. 2. Use the arm's gripper to pick up the rubbish. 3. Move the arm to the bin. 4. Release the rubbish into the bin by opening the gripper."]
+                        print(instr)
                         break
                     except:
                         print(f"Cannot init episode {task}")

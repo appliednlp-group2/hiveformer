@@ -20,3 +20,4 @@ xp/
 dataset/
 *.lock
 !requirements.txt
+*.out
