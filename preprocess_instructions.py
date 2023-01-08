@@ -25,12 +25,14 @@ class Arguments(tap.Tap):
     output: Path
     batch_size: int = 10
     encoder: TextEncoder = "clip"
-    model_max_length: int = 53
+    model_max_length: int = 50
     variations: Tuple[int, ...] = (0, )
     device: str = "cuda"
     annotations: Tuple[Path, ...] = ()
     zero: bool = False
     verbose: bool = False
+    episodes: int = 100
+    input_dir: Path
 
 
 def parse_int(s):
@@ -139,30 +141,48 @@ if __name__ == "__main__":
                 instr: Optional[List[str]] = annotations[task][variation]
             # or, collect it from RLBench synthetic instructions
             else:
-                instr = None
-                for i in range(3):
-                    try:
-                        instr = task_inst.init_episode(variation)
-                        instr = ["1. Position the arm above the rubbish. 2. Use the arm's gripper to pick up the rubbish. 3. Move the arm to the bin. 4. Release the rubbish into the bin by opening the gripper."]
-                        print(instr)
-                        break
-                    except:
-                        print(f"Cannot init episode {task}")
-                if instr is None:
-                    raise RuntimeError()
+                # instr = None
+                # for i in range(3):
+                #     try:
+                #         instr = task_inst.init_episode(variation)
+                #         instr = ["1. Position the arm above the rubbish. 2. Use the arm's gripper to pick up the rubbish. 3. Move the arm to the bin. 4. Release the rubbish into the bin by opening the gripper."]
+                #         print(instr)
+                #         break
+                #     except:
+                #         print(f"Cannot init episode {task}")
+                # if instr is None:
+                #     raise RuntimeError()
+                instr = []
+                preds = []
+                for i in range(args.episodes):
+                    with open(f'{args.input_dir}/instruction{i}.txt', 'r') as f:
+                        instruction = f.read()
+                    
+                    tokens = tokenizer(instruction.split("\n"), padding="max_length")["input_ids"]
+                    tokens = torch.tensor(tokens).to(args.device)
+                    with torch.no_grad():
+                        pred = model(tokens).last_hidden_state
+                    # pred = [pred[i] for i in range(pred.shape[0])]
+                    # pred = torch.cat(pred, dim=0).cpu()
+                    pred = pred.mean(0).cpu()
+                    preds += [pred]
+                    
+                    instr += [instruction]
+                print(instr)
 
             if args.verbose:
                 print(task, variation, instr)
 
-            tokens = tokenizer(instr, padding="max_length")["input_ids"]
-            lengths = [len(t) for t in tokens]
-            if any(l > args.model_max_length for l in lengths):
-                raise RuntimeError(f"Too long instructions: {lengths}")
+            # tokens = tokenizer(instr, padding="max_length")["input_ids"]
+            # lengths = [len(t) for t in tokens]
+            # if any(l > args.model_max_length for l in lengths):
+            #     raise RuntimeError(f"Too long instructions: {lengths}")
 
-            tokens = torch.tensor(tokens).to(args.device)
-            with torch.no_grad():
-                pred = model(tokens).last_hidden_state
-            instructions[task][variation] = pred.cpu()
+            # tokens = torch.tensor(tokens).to(args.device)
+            # with torch.no_grad():
+            #     pred = model(tokens).last_hidden_state
+            # instructions[task][variation] = pred.cpu()
+            instructions[task][variation] = torch.stack(preds)
 
     if args.zero:
         for instr_task in instructions.values():

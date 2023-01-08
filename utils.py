@@ -1,4 +1,5 @@
 from abc import abstractmethod, ABC
+import re
 import random
 import itertools
 import pickle
@@ -159,6 +160,33 @@ class Mover:
 
         return obs, reward, terminate, images
 
+import transformers
+TextEncoder = Literal["bert", "clip"]
+
+def load_model(encoder: TextEncoder) -> transformers.PreTrainedModel:
+    if encoder == "bert":
+        model = transformers.BertModel.from_pretrained("bert-base-uncased")
+    elif encoder == "clip":
+        model = transformers.CLIPTextModel.from_pretrained("openai/clip-vit-base-patch32")
+    else:
+        raise ValueError(f"Unexpected encoder {encoder}")
+    if not isinstance(model, transformers.PreTrainedModel):
+        raise ValueError(f"Unexpected encoder {encoder}")
+    return model
+
+
+def load_tokenizer(encoder: TextEncoder) -> transformers.PreTrainedTokenizer:
+    if encoder == "bert":
+        tokenizer = transformers.BertTokenizer.from_pretrained("bert-base-uncased")
+    elif encoder == "clip":
+        tokenizer = transformers.CLIPTokenizer.from_pretrained(
+            "openai/clip-vit-base-patch32"
+        )
+    else:
+        raise ValueError(f"Unexpected encoder {encoder}")
+    if not isinstance(tokenizer, transformers.PreTrainedTokenizer):
+        raise ValueError(f"Unexpected encoder {encoder}")
+    return tokenizer
 
 class Actioner:
     def __init__(
@@ -176,14 +204,51 @@ class Actioner:
         self._task: Optional[str] = None
 
         self._model.eval()
+        
+        self.tokenizer = load_tokenizer("clip")
+        self.tokenizer.model_max_length = 60
+        self.clip_model = load_model("clip")
+        self.clip_model.to(self.device)
 
     def load_episode(
-        self, task_str: str, variation: int, demo_id: int, demo: Union[Demo, int]
+        self, task_str: str, variation: int, demo_id: int, demo: Union[Demo, int], chatGPT=False, task=None
     ):
         self._task = task_str
-        instructions = list(self._instructions[task_str][variation])
-        self._instr = random.choice(instructions).unsqueeze(0)
+        if chatGPT:
+            description = task.get_instruction()
+            print(description)
+            bin_pos_str = re.findall(r'bin (\(.*\)), rubbish', description)[0]
+            rubbish_pos_str = re.findall(r'rubbish (\(.*\)), tomato1', description)[0]
 
+#             prompt = \
+# f"""1. Move the arm to the position of the rubbish using the provided coordinates %s.
+# 2. Grasp the rubbish using the gripper.
+# 3. Move the arm to the position of the bin using the provided coordinates %s.
+# 4. Release the rubbish into the bin."""
+#             prompt = \
+# f"""1. Move to the rubbish's position: %s
+# 2. Grasp the rubbish with the arm's gripper.
+# 3. Move to the bin's position: %s
+# 4. Release the rubbish into the bin."""
+            prompt = \
+"""1. Move the robotic arm to the position of the rubbish using the provided coordinates.
+2. Grasp the rubbish with the gripper.
+3. Move the robotic arm to the position of the bin using the provided coordinates.
+4. Release the rubbish into the bin."""
+            # prompt = prompt % (rubbish_pos_str, bin_pos_str)
+            tokens = self.tokenizer(prompt.split('\n'), padding="max_length")["input_ids"]
+            tokens = torch.tensor(tokens).to(self.device)
+            with torch.no_grad():
+                pred = self.clip_model(tokens).last_hidden_state.cpu()
+            # pred = [pred[i] for i in range(pred.shape[0])]
+            # pred = torch.cat(pred, dim=0).unsqueeze(0)
+            pred = pred.mean(0).unsqueeze(0)
+            self._instr = pred
+
+        else:
+            instructions = list(self._instructions[task_str][variation])
+            self._instr = random.choice(instructions).unsqueeze(0)
+        
         self._actions = {}
 
     def get_action_from_demo(self, demo: Demo):
@@ -385,6 +450,7 @@ class RLBenchEnv:
         max_tries: int = 1,
         demos: Optional[List[Demo]] = None,
         save_attn: bool = False,
+        chatgpt: bool = False
     ):
         """
         Evaluate the policy network on the desired demo or test environments
@@ -428,7 +494,7 @@ class RLBenchEnv:
                     print(demo)
                     _, obs = task.reset_to_demo(demo)
 
-                actioner.load_episode(task_str, variation, demo_id, demo)
+                actioner.load_episode(task_str, variation, demo_id, demo, chatgpt, task._task)
 
                 images.append(
                     {cam: getattr(obs, f"{cam}_rgb") for cam in self.apply_cameras}

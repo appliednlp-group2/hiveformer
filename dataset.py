@@ -21,6 +21,7 @@ import torchvision.transforms as transforms
 import torchvision.transforms.functional as transforms_f
 import einops
 from utils import Instructions, Sample, Camera
+from natsort import natsorted
 
 
 T = TypeVar("T")
@@ -224,7 +225,7 @@ class RLBenchDataset(data.Dataset):
             data_dir = root / f"{task}+{var}"
             if not data_dir.is_dir():
                 raise ValueError(f"Can't find dataset folder {data_dir}")
-            episodes = [(task, var, ep) for ep in data_dir.glob("*.npy")]
+            episodes = [(task, var, ep) for ep in natsorted(data_dir.glob("*.npy"))]
             episodes = episodes[: self._max_episodes_per_taskvar]
             num_episodes = len(episodes)
             if num_episodes == 0:
@@ -289,7 +290,7 @@ class RLBenchDataset(data.Dataset):
 
         mask = torch.tensor([True] * num_ind + [False] * pad_len)
 
-        instr: torch.Tensor = random.choice(self._instructions[task][variation])
+        instr: torch.Tensor = self._instructions[task][variation][episode_id]
 
         gripper = torch.cat([episode[4][i] for i in frame_ids])
         shape = [0, 0] * gripper.dim()
@@ -309,6 +310,7 @@ class RLBenchDataset(data.Dataset):
             "padding_mask": mask,
             "instr": instr,
             "gripper": gripper,
+            "file": int(file.stem[2:])
         }
 
     def __len__(self):

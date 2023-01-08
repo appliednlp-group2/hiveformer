@@ -65,6 +65,7 @@ class Arguments(tap.Tap):
     instr_size: int = 512
     mask_obs_prob: float = 0.0
     num_layers: int = 1
+    num_words: int = 53
 
 
 def training(
@@ -117,13 +118,13 @@ def training(
 
             for n, l in train_losses.items():
                 writer.add_scalar(f"train-loss/{n}", l, step_id)
-
+            if train_losses["rotation"] > 0.3 and step_id > 10:
+                print(sample["file"])
             writer.add_scalar(f"lr/", args.lr, step_id)
 
             metrics = loss_and_metrics.compute_metrics(pred, sample)
             for n, l in metrics.items():
                 writer.add_scalar(f"train-metrics/{n}", l, step_id)
-
             train_losses["total"].backward()  # type: ignore
 
             if step_id % args.accumulate_grad_batches == args.accumulate_grad_batches - 1:
@@ -360,6 +361,7 @@ def get_model(args: Arguments) -> Tuple[optim.Optimizer, Hiveformer]:
         mask_obs_prob=args.mask_obs_prob,
         max_episode_length=max_episode_length,
         num_layers=args.num_layers,
+        num_words=args.num_words,
     ).to(device)
 
     optimizer_grouped_parameters = [
