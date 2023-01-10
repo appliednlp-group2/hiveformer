@@ -67,7 +67,7 @@ class Arguments(tap.Tap):
     num_layers: int = 1
 
     #####
-    add_pos_emb: bool = True
+    add_pos_emb: bool = False
 
 
 def training(

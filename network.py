@@ -742,9 +742,14 @@ class Hiveformer(nn.Module):
         xe = einops.rearrange(xe, "b t n h w c -> b t (n h w) c")
 
         if self.add_pos_emb:
-            position2 = torch.tensor([1] * 7 + [2] * 10 + [3] * 7 + [4] * 11 + [0] * 18).type_as(x).unsqueeze(0).long()
+            position2 = torch.arange(self._max_episode_length).type_as(x).unsqueeze(0).long()
             pos_emb2 = self.position_embedding(position2)
             pos_emb2 = self.position_norm(pos_emb2).squeeze(0)
+            pos_pad_emb = torch.zeros((1, self._hidden_dim)).type_as(x)
+            pos_pad_emb = self.position_norm(pos_pad_emb)
+            pos_emb2 = torch.cat([pos_emb2, pos_pad_emb], dim=0) # (t+1, d)
+            repeat_num = torch.tensor([7, 10, 7, 11, 18]).to(x.device)
+            pos_emb2 = pos_emb2.repeat_interleave(repeat_num, dim=0)
 
         ce = self.cross_transformer(xe, padding_mask, instruction, add_pos_emb=pos_emb2 if self.add_pos_emb else None)
 

@@ -49,6 +49,7 @@ class Arguments(tap.Tap):
     mask_obs_prob: float = 0.0
     num_layers: Optional[int] = None
 
+    add_pos_emb: bool = False
 
 def get_log_dir(args: Arguments) -> Path:
     log_dir = args.test_xp / args.name
@@ -119,6 +120,7 @@ def load_model(checkpoint: Path, args: Arguments) -> Hiveformer:
         mask_obs_prob=args.mask_obs_prob,
         max_episode_length=max_episode_length,
         num_layers=args.num_layers,
+        add_pos_emb=args.add_pos_emb
     ).to(device)
 
     if hasattr(model, "film_gen") and model.film_gen is not None:
