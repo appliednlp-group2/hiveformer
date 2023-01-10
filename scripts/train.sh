@@ -9,4 +9,4 @@ python train.py \
  	--instructions ./dataset/instructions/$task/instructions_fix.pkl \
 	--variations 0 \
     --device "cuda:1" \
-	--train_iters 100000
+	--train_iters 100000 --add_pos_emb

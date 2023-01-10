@@ -303,6 +303,7 @@ class CrossTransformer(nn.Module):
         self,
         instruction,
         input_tensor: torch.Tensor,
+        add_pos_emb=None
     ) -> torch.Tensor:
         if (
             self.proj_instr_encoder is None
@@ -322,7 +323,12 @@ class CrossTransformer(nn.Module):
         pos_emb = self.instr_position_norm(pos_emb)
         pos_emb = einops.repeat(pos_emb, "1 k d -> b k d", b=B)
 
-        instruction += pos_emb
+        if add_pos_emb is not None: # t d
+            add_pos_emb = einops.repeat(add_pos_emb, "k d -> b k d", b=B)
+            instruction += pos_emb + add_pos_emb
+        else:      
+            instruction += pos_emb
+
         instruction = einops.repeat(instruction, "b k d -> b t k d", t=T)
         instruction = einops.rearrange(instruction, "b t k d -> (b t) k d", t=T)
 
@@ -342,6 +348,7 @@ class CrossTransformer(nn.Module):
         x: torch.Tensor,
         padding_mask: torch.Tensor,
         instruction: torch.Tensor,
+        add_pos_emb=None,
     ):
         B, T, K, C = x.shape
 
@@ -358,7 +365,7 @@ class CrossTransformer(nn.Module):
             ctx_attn_mask, "bt t -> bt nh k (t kp)", nh=1, k=K, kp=K
         )
 
-        ctx_tensor = self._add_instruction(instruction, ctx_tensor)
+        ctx_tensor = self._add_instruction(instruction, ctx_tensor, add_pos_emb=add_pos_emb)
         num_words = instruction.shape[1]
         ctx_attn_mask = F.pad(ctx_attn_mask, (num_words, 0))
 
@@ -449,6 +456,7 @@ class Hiveformer(nn.Module):
         instr_size: int = 512,
         max_episode_length: int = 10,
         token_size: int = 19,
+        add_pos_emb: bool = False,
     ):
         super(Hiveformer, self).__init__()
 
@@ -460,6 +468,8 @@ class Hiveformer(nn.Module):
         self._hidden_dim = hidden_dim
         self._mask_obs_prob = mask_obs_prob
         self._token_size = token_size
+
+        self.add_pos_emb = add_pos_emb
 
         self.cross_transformer = CrossTransformer(
             hidden_size=hidden_dim,
@@ -709,7 +719,7 @@ class Hiveformer(nn.Module):
         position = torch.arange(T).type_as(x).unsqueeze(0).long()
         pos_emb = self.position_embedding(position)
         pos_emb = self.position_norm(pos_emb).squeeze(0)
-        pos_emb = einops.repeat(pos_emb, "t d -> b t n h w d", b=B, n=N, h=H, w=W)
+        pos_emb_ = einops.repeat(pos_emb, "t d -> b t n h w d", b=B, n=N, h=H, w=W)
 
         pix_id = torch.arange(H * W).type_as(x).unsqueeze(0).long()
         pix_emb = self.pix_embedding(pix_id)
@@ -727,11 +737,16 @@ class Hiveformer(nn.Module):
         xe = einops.rearrange(x, "b t n c h w -> b t n h w c")
         xe = self.visual_embedding(xe)
         xe = self.visual_norm(xe)
-        xe += pix_emb + cam_emb + pos_emb
+        xe += pix_emb + cam_emb + pos_emb_
 
         xe = einops.rearrange(xe, "b t n h w c -> b t (n h w) c")
 
-        ce = self.cross_transformer(xe, padding_mask, instruction)
+        if self.add_pos_emb:
+            position2 = torch.tensor([1] * 7 + [2] * 10 + [3] * 7 + [4] * 11 + [0] * 18).type_as(x).unsqueeze(0).long()
+            pos_emb2 = self.position_embedding(position2)
+            pos_emb2 = self.position_norm(pos_emb2).squeeze(0)
+
+        ce = self.cross_transformer(xe, padding_mask, instruction, add_pos_emb=pos_emb2 if self.add_pos_emb else None)
 
         ce = einops.rearrange(ce, "(b t) (n h w) c -> b t n c h w", n=N, t=T, h=H, w=W)
 

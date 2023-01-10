@@ -66,6 +66,9 @@ class Arguments(tap.Tap):
     mask_obs_prob: float = 0.0
     num_layers: int = 1
 
+    #####
+    add_pos_emb: bool = True
+
 
 def training(
     model: nn.Module,
@@ -360,6 +363,7 @@ def get_model(args: Arguments) -> Tuple[optim.Optimizer, Hiveformer]:
         mask_obs_prob=args.mask_obs_prob,
         max_episode_length=max_episode_length,
         num_layers=args.num_layers,
+        add_pos_emb=args.add_pos_emb
     ).to(device)
 
     optimizer_grouped_parameters = [
