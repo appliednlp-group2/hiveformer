@@ -16,9 +16,10 @@ echo $dataset_dir, $task, $seed, $variations, $device
 
 python train.py \
 	--tasks $task \
-	--dataset $dataset_dir/packaged/$seed \
+	--dataset $dataset_dir/packaged/0 \
 	--num_workers 8  \
  	--instructions $dataset_dir/instructions/$task/instructions.pkl \
 	--variations $variations \
   	--device $device \
-	--train_iters 100000
+	--train_iters 100000 \
+	--seed $seed
