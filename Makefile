@@ -8,8 +8,8 @@ run:
 	docker run -d -it --gpus all --rm --name ${name}_hiveformer \
 			-v `pwd`:/root/hiveformer \
 			-v /share/shota.takashiro/hiveformer_dataset:/root/hiveformer_dataset \
-			--shm-size=50gb \
-			hiveformer:latest
+			--shm-size=5gb \
+			seele1917/hiveformer:latest
 
 exec:
 	docker exec -it $(name)_hiveformer bash
