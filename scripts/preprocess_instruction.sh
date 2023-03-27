@@ -1,9 +1,11 @@
-file_name=instructions.pkl
-task=put_rubbish_in_bin
+instruction_dir=./hiveformer_dataset/multi_task_dataset/instructions
+tasks=(basketball_in_hoop slide_block_to_target wipe_desk lamp_off close_drawer turn_tap take_usb_out_of_computer turn_oven_on close_microwave)
 
-mkdir ./dataset/instructions
+
+mkdir $instruction_dir
 python preprocess_instructions.py \
-	--tasks $task \
-	--output ./dataset/instructions/$task/$file_name \
-	--annotations annotations.json \
-    --device "cuda:0"
+  --tasks ${tasks[@]} \
+  --output $instruction_dir \
+  --annotations annotations.json \
+  --device "cuda:0"
+#   --fixed

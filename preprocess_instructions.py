@@ -34,6 +34,7 @@ class Arguments(tap.Tap):
     annotations: Tuple[Path, ...] = ()
     zero: bool = False
     verbose: bool = False
+    fixed: bool = False
 
 
 def parse_int(s):
@@ -125,7 +126,8 @@ if __name__ == "__main__":
 
     instructions: Dict[str, Dict[int, torch.Tensor]] = {}
     tasks = set(args.tasks)
-    llm = InstructionLLM()
+    if args.fixed:
+        llm = InstructionLLM()
 
     for task in tqdm(tasks):
         task_type = task_file_to_task_class(task)
@@ -147,7 +149,8 @@ if __name__ == "__main__":
                 for i in range(30):
                     try:
                         instr = task_inst.init_episode(variation)
-                        instr = [llm.get_instruction(task, instr)]
+                        if args.fixed:
+                            instr = [llm.get_instruction(task, instr)]
                         # instr = ["1. Position the arm above the rubbish. 2. Use the arm's gripper to pick up the rubbish. 3. Move the arm to the bin. 4. Release the rubbish into the bin by opening the gripper."]
                         # instr = ["1. Move the robotic arm to the door handle. 2. Grasp the door handle with the gripper. 3. Pull the door towards the robot until it is closed."]
                         if args.verbose:
@@ -158,7 +161,7 @@ if __name__ == "__main__":
                         if any(l > args.model_max_length for l in lengths):
                             raise RuntimeError(f"Too long instructions: {lengths}")
                         print(task + ":")
-                        print(instr[0])
+                        print(instr)
                         break
                     except:
                         print(f"Cannot init episode {task}")
@@ -180,6 +183,8 @@ if __name__ == "__main__":
 
     for task in tqdm(tasks):
         path = args.output / task / "instructions.pkl"
+        if args.fixed:
+            path = args.output / task / "instructions_fixed.pkl"
         path.parent.mkdir(exist_ok=True)
         with open(path, "wb") as f:
             pickle.dump({task: instructions[task]}, f)

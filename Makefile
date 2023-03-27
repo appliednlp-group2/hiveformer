@@ -7,6 +7,7 @@ build:
 run:
 	docker run -d -it --gpus all --rm --name ${name}_hiveformer \
 			-v `pwd`:/root/hiveformer \
+			-v /share/shota.takashiro/hiveformer_dataset:/root/hiveformer_dataset \
 			--shm-size=50gb \
 			hiveformer:latest
 

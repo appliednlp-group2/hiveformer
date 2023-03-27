@@ -24,7 +24,6 @@ from utils import (
 )
 from dataset import RLBenchDataset
 
-
 class Arguments(tap.Tap):
     accumulate_grad_batches: int = 1
     cameras: Tuple[str, ...] = ("wrist", "left_shoulder", "right_shoulder")
@@ -147,11 +146,12 @@ def training(
 
 
 def get_log_dir(args: Arguments) -> Path:
-    log_dir = args.xp / args.name
-    version = int(os.environ.get("SLURM_JOBID", 0))
-    while (log_dir / f"version{version}").is_dir():
-        version += 1
-    return log_dir / f"version{version}"
+    log_dir = args.xp / args.name / args.tasks[0] / f"{args.seed}"
+    # version = int(os.environ.get("SLURM_JOBID", 0))
+    # while (log_dir / f"version{version}").is_dir():
+    #     version += 1
+    # return log_dir / f"version{version}"
+    return log_dir
 
 
 class CheckpointCallback:
@@ -270,7 +270,6 @@ def get_train_loader(args: Arguments) -> DataLoader:
     instruction = load_instructions(
         args.instructions, tasks=args.tasks, variations=args.variations
     )
-
     if instruction is None:
         raise NotImplementedError()
     else:
