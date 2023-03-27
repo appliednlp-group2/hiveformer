@@ -4,7 +4,7 @@ from langchain.llms import OpenAIChat
 import json
 
 import os
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = ""
 
 class InstructionLLM():
     def __init__(self, model_name="gpt-3.5-turbo"):
