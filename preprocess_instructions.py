@@ -5,7 +5,7 @@ import re
 import json
 from pathlib import Path
 import itertools
-from typing import List, Tuple, Literal, Dict, Optional
+from typing import List, Tuple, List, Literal, Dict, Optional
 from collections import defaultdict
 import pickle
 import tap
@@ -14,6 +14,9 @@ from tqdm.auto import tqdm
 import torch
 from torch import nn
 from utils import RLBenchEnv, task_file_to_task_class
+from chatgpt import InstructionLLM
+from contextlib import redirect_stdout
+import io
 
 
 Annotations = Dict[str, Dict[int, List[str]]]
@@ -122,6 +125,7 @@ if __name__ == "__main__":
 
     instructions: Dict[str, Dict[int, torch.Tensor]] = {}
     tasks = set(args.tasks)
+    llm = InstructionLLM()
 
     for task in tqdm(tasks):
         task_type = task_file_to_task_class(task)
@@ -131,8 +135,8 @@ if __name__ == "__main__":
         instructions[task] = {}
 
         variations = [v for v in args.variations if v < task_inst.variation_count()]
-        print("Num available var", task_inst.variation_count())
-        print("Num var", len(variations))
+        # print("Num available var", task_inst.variation_count())
+        # print("Num var", len(variations))
         for variation in variations:
             # check instructions among annotations
             if task in annotations and variation in annotations[task]:
@@ -140,27 +144,32 @@ if __name__ == "__main__":
             # or, collect it from RLBench synthetic instructions
             else:
                 instr = None
-                for i in range(3):
+                for i in range(30):
                     try:
                         instr = task_inst.init_episode(variation)
+                        instr = [llm.get_instruction(task, instr)]
+                        # instr = ["1. Position the arm above the rubbish. 2. Use the arm's gripper to pick up the rubbish. 3. Move the arm to the bin. 4. Release the rubbish into the bin by opening the gripper."]
+                        # instr = ["1. Move the robotic arm to the door handle. 2. Grasp the door handle with the gripper. 3. Pull the door towards the robot until it is closed."]
+                        if args.verbose:
+                            print(task, variation, instr)
+
+                        tokens = tokenizer(instr, padding="max_length")["input_ids"]
+                        lengths = [len(t) for t in tokens]
+                        if any(l > args.model_max_length for l in lengths):
+                            raise RuntimeError(f"Too long instructions: {lengths}")
+                        print(task + ":")
+                        print(instr[0])
                         break
                     except:
                         print(f"Cannot init episode {task}")
                 if instr is None:
                     raise RuntimeError()
 
-            if args.verbose:
-                print(task, variation, instr)
-
-            tokens = tokenizer(instr, padding="max_length")["input_ids"]
-            lengths = [len(t) for t in tokens]
-            if any(l > args.model_max_length for l in lengths):
-                raise RuntimeError(f"Too long instructions: {lengths}")
-
             tokens = torch.tensor(tokens).to(args.device)
             with torch.no_grad():
                 pred = model(tokens).last_hidden_state
             instructions[task][variation] = pred.cpu()
+            instructions[task]["raw"] = instr
 
     if args.zero:
         for instr_task in instructions.values():
@@ -169,6 +178,8 @@ if __name__ == "__main__":
 
     print("Instructions:", sum(len(inst) for inst in instructions.values()))
 
-    args.output.parent.mkdir(exist_ok=True)
-    with open(args.output, "wb") as f:
-        pickle.dump(instructions, f)
+    for task in tqdm(tasks):
+        path = args.output / task / "instructions.pkl"
+        path.parent.mkdir(exist_ok=True)
+        with open(path, "wb") as f:
+            pickle.dump({task: instructions[task]}, f)
