@@ -146,7 +146,7 @@ def training(
 
 
 def get_log_dir(args: Arguments) -> Path:
-    log_dir = args.xp / args.name / args.tasks[0] / f"{args.seed}"
+    log_dir = args.xp / args.name / args.instructions.stem /args.tasks[0] / f"{args.seed}"
     # version = int(os.environ.get("SLURM_JOBID", 0))
     # while (log_dir / f"version{version}").is_dir():
     #     version += 1

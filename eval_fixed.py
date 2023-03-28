@@ -66,7 +66,7 @@ class Arguments(tap.Tap):
     num_layers: int = 1
     num_words: int = 53
     num_demos: int = 100
-    num_repeat: int = 3
+    num_repeat: int = 1
     steps: Tuple[int, ...] = (50, 100, 150, 200, 250, 300, 350, 400, 450, 500)
 
 
