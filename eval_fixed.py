@@ -122,7 +122,7 @@ if __name__ == "__main__":
 
     output_list = []
     for _ in range(args.num_repeat):
-        output = {}
+        output = {0: 0}
         for step in args.steps: # [50, 100, 150, 200, 250, 350, 300, 350, 400, 450, 500, 550]:
             if step == 550:
                 args.checkpoint = args.checkpoint_dir / f"mtl_2_0.001.pth"
