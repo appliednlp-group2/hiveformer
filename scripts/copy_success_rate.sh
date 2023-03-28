@@ -6,7 +6,7 @@ do
   do
     for seed in 0 1 2
     do
-      cp xp/hiveformer/$case/$task/$seed/success_rate.pkl /share/shota.takashiro/hiveformer_result/$case/$task/$seed
+      cp xp/hiveformer/$case/$task/$seed/success_rate.pkl /share/shota.takashiro/hiveformer_dataset/result/$case/$task/$seed
     done
   done
 done
