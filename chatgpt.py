@@ -4,7 +4,7 @@ from langchain.llms import OpenAIChat
 import json
 
 import os
-os.environ["OPENAI_API_KEY"] = ""
+os.environ["OPENAI_API_KEY"] = ''
 
 class InstructionLLM():
     def __init__(self, model_name="gpt-3.5-turbo"):
@@ -22,7 +22,9 @@ The instructions must be short and informative and concise.
 Task:
 {task_descriptions}
 
-Instruction:
+Format:
+1. 
+2. 
 """
         # print(text)
         return self.llm(text)

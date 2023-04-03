@@ -397,6 +397,13 @@ class RLBenchEnv:
         """
 
         self.env.launch()
+
+        from pyrep.objects.camera import Camera
+        camera = Camera("DefaultCamera")
+        position = camera.get_position()
+        position *= 0.7
+        camera.set_position(position)
+
         task_type = task_file_to_task_class(task_str)
         task = self.env.get_task(task_type)
         task.set_variation(variation)  # type: ignore
