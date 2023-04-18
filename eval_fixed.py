@@ -68,6 +68,7 @@ class Arguments(tap.Tap):
     num_demos: int = 100
     num_repeat: int = 1
     steps: Tuple[int, ...] = (50, 100, 150, 200, 250, 300, 350, 400, 450, 500)
+    fixed: bool = False
 
 
 def get_model(args: Arguments) -> Tuple[optim.Optimizer, Hiveformer]:
@@ -141,8 +142,11 @@ if __name__ == "__main__":
                     apply_cameras=("left_shoulder", "right_shoulder", "wrist"),
                     headless=args.headless,
                 )
-
-                instruction = load_instructions(args.instructions)
+                instruction_path = args.instructions / task / 'instructions.pkl'
+                if args.fixed:
+                    instruction_path = args.instructions / task / 'instructions_fixed.pkl'
+                print(instruction_path)
+                instruction = load_instructions(instruction_path)
                 if instruction is None:
                     raise NotImplementedError()
 
