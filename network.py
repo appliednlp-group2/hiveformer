@@ -642,7 +642,6 @@ class Hiveformer(nn.Module):
         instruction: torch.Tensor,
         gripper: torch.Tensor,
     ) -> Output:
-        padding_mask2 = torch.ones_like(padding_mask)  # HACK
 
         # processing encoding feature
         B, T, N = rgb_obs.shape[:3]

@@ -119,50 +119,52 @@ if __name__ == "__main__":
     random.seed(args.seed)
 
     device = torch.device(args.device)
+    output_dict = {}
+    for task in args.tasks:
+        output_list = []
+        for _ in range(args.num_repeat):
+            output = {0: 0}
+            for step in args.steps: # [50, 100, 150, 200, 250, 350, 300, 350, 400, 450, 500, 550]:
+                if step == 550:
+                    args.checkpoint = args.checkpoint_dir / f"mtl_2_0.001.pth"
+                else:
+                    args.checkpoint = args.checkpoint_dir / f"model.step={step}-value=0.pth"
+                optimizer, model = get_model(args)
 
-    output_list = []
-    for _ in range(args.num_repeat):
-        output = {0: 0}
-        for step in args.steps: # [50, 100, 150, 200, 250, 350, 300, 350, 400, 450, 500, 550]:
-            if step == 550:
-                args.checkpoint = args.checkpoint_dir / f"mtl_2_0.001.pth"
-            else:
-                args.checkpoint = args.checkpoint_dir / f"model.step={step}-value=0.pth"
-            optimizer, model = get_model(args)
+                # evaluation
+                model.eval()
 
-            # evaluation
-            model.eval()
+                env = RLBenchEnv(
+                    data_path="",
+                    apply_rgb=True,
+                    apply_pc=True,
+                    apply_cameras=("left_shoulder", "right_shoulder", "wrist"),
+                    headless=args.headless,
+                )
 
-            env = RLBenchEnv(
-                data_path="",
-                apply_rgb=True,
-                apply_pc=True,
-                apply_cameras=("left_shoulder", "right_shoulder", "wrist"),
-                headless=args.headless,
-            )
+                instruction = load_instructions(args.instructions)
+                if instruction is None:
+                    raise NotImplementedError()
 
-            instruction = load_instructions(args.instructions)
-            if instruction is None:
-                raise NotImplementedError()
+                actioner = Actioner(model=model, instructions=instruction)
+                max_eps_dict = load_episodes()["max_episode_length"]
 
-            actioner = Actioner(model=model, instructions=instruction)
-            max_eps_dict = load_episodes()["max_episode_length"]
-
-            success_rate = env.evaluate(
-                args.tasks[0],
-                actioner=actioner,
-                max_episodes=max_eps_dict.get(args.tasks[0], 6),
-                variation=args.variations[0],
-                num_demos=args.num_demos,
-                demos=None,
-                log_dir=None,
-                max_tries=args.max_tries,
-            )
-            output[step] = success_rate
-            print("[{}]Testing Success Rate {}: {:.04f}".format(step, args.tasks[0], success_rate))
-        print(output)
-        output_list += [output]
+                success_rate = env.evaluate(
+                    task,
+                    actioner=actioner,
+                    max_episodes=max_eps_dict.get(task, 6),
+                    variation=args.variations[0],
+                    num_demos=args.num_demos,
+                    demos=None,
+                    log_dir=None,
+                    max_tries=args.max_tries,
+                )
+                output[step] = success_rate
+                print("[{}]Testing Success Rate {}: {:.04f}".format(step, task, success_rate))
+            print(output)
+            output_list += [output]
+            output_dict[task] = output_list
         
     import pickle
     with open(f'{args.checkpoint_dir}/success_rate.pkl', 'wb') as f:
-        pickle.dump(output_list, f)
+        pickle.dump(output_dict, f)
